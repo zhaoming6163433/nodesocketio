@@ -27,21 +27,18 @@ exports.connctsocketfn = function(server){
                 roomIpArry.push({ip:client_s,roomid:roomid})
             }
             
-            //将新加入用户socket存放arrAllSocket
+            //将新加入用户socket存放arrAllSocket每次进入详情都重新连接,有就替换没有就新增
             socket.name = client_s+"."+roomid;
-            var isflag1 = true;
             var userid = client_s+'.'+roomid;
-            for(var key in arrAllSocket){
-                if(key==userid){
-                    isflag1 = false;
+            arrAllSocket[userid] = socket;
+            //向当前客户端展示房间信息
+            var roominfo = {};
+            roomInfo.forEach(function(item){
+                if(item.roomid == roomid){
+                    roominfo = item;
                 }
-            }
-            if(isflag1){
-                arrAllSocket[userid] = socket;
-            }
-            //向指定客户端广播用户加入
-            //socket.emit('news', roomIpArry);
-
+            });
+            socket.emit('roominfo', roominfo, getip(socket));
         });
         
         //监听用户退出某个房间
@@ -69,22 +66,65 @@ exports.connctsocketfn = function(server){
                 roomIpArry = _newarr;
             }
         });
-        //监听用户发布聊天内容
-        socket.on('message', function(obj){
-            console.log(obj)
-
-        });
         //房间列表
         socket.on('getroomlist',function(obj){
-            socket.emit('roomlist', roomInfo);
+            socket.emit('roomlist', roomInfo , getip(socket));
         });
         //监听创建房间
         socket.on('createroom',function(obj){
             var client_s = getip(socket);
-            var _obj = {roomid:uuidV4(),createrip:client_s,roominfo:obj}    
+            var _obj = {roomid:uuidV4(),createrip:client_s,roominfo:obj,selectediparr:[]};  
             roomInfo.push(_obj);
-            io.emit('roomlist', roomInfo);
+            io.emit('roomlist', roomInfo ,getip(socket));
         });
-    
+        //删除房间
+        socket.on('delroom',function(obj){
+            roomInfo.forEach(function(item,index){
+                if(item.roomid == obj.roomid){
+                    roomInfo.splice(index,1);
+                }
+            });
+            //推送所有
+            io.emit('roomlist', roomInfo ,getip(socket));
+        });
+        //对房间信息提交后进行修改并发送到房间的每个用户
+        socket.on('submitroom',function(obj){
+            var ip = getip(socket);
+            var roomid = obj.roomid;
+            var thingval = obj.thingval;
+            var myroominfo = {};
+            roomInfo.forEach(function(item){
+                if(item.roomid == roomid){
+                    var isselected = false;
+                    for(var i=0;i<item.selectediparr.length;i++){
+                        if(item.selectediparr[i]==ip){
+                            isselected = true;
+                        }
+                    }
+                    //把投票结果存到roominfo里面 并投过票的ip放到数组里面
+                    if(!isselected){
+                        item.selectediparr.push(ip);
+                        item.roominfo.addthinglist.forEach(function(item1){
+                            if(item1.id == thingval){
+                                item1.num = item1.num+1;
+                            }
+                        });
+                    }
+                    myroominfo = item;
+                }
+            });
+            //分发给当前房间的用户
+            var _socketarr = [];
+            for(var key in arrAllSocket){
+                if(key.indexOf(roomid) != -1){
+                    _socketarr.push(arrAllSocket[key]);
+                }
+            }
+            for(var j=0;j<_socketarr.length;j++){
+                var _socket = _socketarr[j];
+                _socket.emit('roominfo', myroominfo, getip(_socket));
+            }
+            
+        })
     });
 }
