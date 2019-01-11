@@ -10,7 +10,7 @@ exports.connctsocketfn = function(server){
             return client_s;
     }
     //分发给当前房间的用户
-    function sendroom(myroominfo){
+    function sendroom(myroominfo,roomid){
         //分发给当前房间的用户
         var _socketarr = [];
         for(var key in arrAllSocket){
@@ -115,7 +115,7 @@ exports.connctsocketfn = function(server){
                 if(item.roomid == obj.roomid){
                     item.roomflag = 1;
                     //推送给进入房间的人民
-                    sendroom(item);
+                    sendroom(item,item.roomid);
                 }
             });
             //推送所有列表
@@ -145,10 +145,10 @@ exports.connctsocketfn = function(server){
                         });
                     }
                     myroominfo = item;
+                    //分发给当前房间的用户
+                    sendroom(myroominfo,roomid);
                 }
             });
-            //分发给当前房间的用户
-            sendroom(myroominfo);
         });
 
         //直接产生结果
@@ -173,7 +173,7 @@ exports.connctsocketfn = function(server){
                     item.roomresult = lastarr1[Math.floor(Math.random()*lastarr1.length)];
                     roominfo = item;
                     //推送给进入房间的人民
-                    sendroom(item);
+                    sendroom(item,roomid);
                 }
             });
 
