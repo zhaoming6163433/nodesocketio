@@ -75,7 +75,7 @@ exports.connctsocketfn = function(server){
             var client_s = getip(socket);
             var _obj = {roomid:uuidV4(),createrip:client_s,roominfo:obj,selectediparr:[]};  
             roomInfo.push(_obj);
-            io.emit('roomlist', roomInfo ,getip(socket));
+            io.emit('roomlist', roomInfo);
         });
         //删除房间
         socket.on('delroom',function(obj){
