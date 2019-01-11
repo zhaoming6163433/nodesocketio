@@ -73,7 +73,15 @@ exports.connctsocketfn = function(server){
         //监听创建房间
         socket.on('createroom',function(obj){
             var client_s = getip(socket);
-            var _obj = {roomid:uuidV4(),createrip:client_s,roominfo:obj,selectediparr:[]};  
+            var _obj = {
+                roomid:uuidV4(),//房间id
+                createrip:client_s,//创建者ip
+                roomflag:0,//房间状态 0进行中 1已截止
+                roomresultflag:false,//是否产生最终结果
+                roomresult:"",//结果
+                roominfo:obj,//房间信息
+                selectediparr:[]//加入者ip
+            };  
             roomInfo.push(_obj);
             io.emit('roomlist', roomInfo);
         });
@@ -85,7 +93,17 @@ exports.connctsocketfn = function(server){
                 }
             });
             //推送所有
-            io.emit('roomlist', roomInfo ,getip(socket));
+            io.emit('roomlist', roomInfo);
+        });
+        //终止投票
+        socket.on('stoproom',function(obj){
+            roomInfo.forEach(function(item,index){
+                if(item.roomid == obj.roomid){
+                    item.roomflag = 1;
+                }
+            });
+            //推送所有
+            io.emit('roomlist', roomInfo);
         });
         //对房间信息提交后进行修改并发送到房间的每个用户
         socket.on('submitroom',function(obj){
@@ -125,6 +143,32 @@ exports.connctsocketfn = function(server){
                 _socket.emit('roominfo', myroominfo, getip(_socket));
             }
             
-        })
+        });
+        //直接产生结果
+        socket.on('zhijieresult', function(obj){
+            let roomid = obj.roomid;
+            var roominfo = {};
+            roomInfo.forEach(function(item){
+                if(item.roomid == roomid){
+                    item.roomresultflag = true;
+                    //计算投票结果 获取最大的几个然后随机选择一个
+                    var lastarr = [].concat(item.roominfo.addthinglist);
+                    lastarr.sort(function(a,b){
+                        return b.num-a.num;
+                    });
+                    var _num = lastarr[0].num;
+                    var lastarr1 = [];
+                    lastarr.forEach(function(item){
+                        if(_num==item.num){
+                            lastarr1.push(item);
+                        }
+                    });
+                    item.roomresult = lastarr1[Math.floor(Math.random()*lastarr1.length)];
+                    roominfo = item;
+                }
+            });
+
+            socket.emit('roominfo', roominfo, getip(socket));
+        });
     });
 }
