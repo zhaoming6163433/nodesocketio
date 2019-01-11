@@ -9,6 +9,20 @@ exports.connctsocketfn = function(server){
             client_s = client_s.substr(client_s.lastIndexOf(":")+1);
             return client_s;
     }
+    //分发给当前房间的用户
+    function sendroom(myroominfo){
+        //分发给当前房间的用户
+        var _socketarr = [];
+        for(var key in arrAllSocket){
+            if(key.indexOf(roomid) != -1){
+                _socketarr.push(arrAllSocket[key]);
+            }
+        }
+        for(var j=0;j<_socketarr.length;j++){
+            var _socket = _socketarr[j];
+            _socket.emit('roominfo', myroominfo, getip(_socket));
+        }
+    }
     io.on('connection', function(socket){
         //监听新用户加入
         socket.on('joinroom', function(obj){
@@ -100,9 +114,11 @@ exports.connctsocketfn = function(server){
             roomInfo.forEach(function(item,index){
                 if(item.roomid == obj.roomid){
                     item.roomflag = 1;
+                    //推送给进入房间的人民
+                    sendroom(item);
                 }
             });
-            //推送所有
+            //推送所有列表
             io.emit('roomlist', roomInfo);
         });
         //对房间信息提交后进行修改并发送到房间的每个用户
@@ -132,18 +148,9 @@ exports.connctsocketfn = function(server){
                 }
             });
             //分发给当前房间的用户
-            var _socketarr = [];
-            for(var key in arrAllSocket){
-                if(key.indexOf(roomid) != -1){
-                    _socketarr.push(arrAllSocket[key]);
-                }
-            }
-            for(var j=0;j<_socketarr.length;j++){
-                var _socket = _socketarr[j];
-                _socket.emit('roominfo', myroominfo, getip(_socket));
-            }
-            
+            sendroom(myroominfo);
         });
+
         //直接产生结果
         socket.on('zhijieresult', function(obj){
             let roomid = obj.roomid;
@@ -165,6 +172,8 @@ exports.connctsocketfn = function(server){
                     });
                     item.roomresult = lastarr1[Math.floor(Math.random()*lastarr1.length)];
                     roominfo = item;
+                    //推送给进入房间的人民
+                    sendroom(item);
                 }
             });
 
