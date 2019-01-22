@@ -179,5 +179,52 @@ exports.connctsocketfn = function(server){
 
             socket.emit('roominfo', roominfo, getip(socket));
         });
+
+        //按权重值随机产生结果
+        socket.on('randomresult', function(obj){
+            let roomid = obj.roomid;
+            var roominfo = {};
+            roomInfo.forEach(function(item){
+                if(item.roomid == roomid){
+                    item.roomresultflag = true;
+                    //计算投票结果 获取最大的几个然后随机选择一个
+                    var lastarr = [].concat(item.roominfo.addthinglist);
+                    var randomnumarr = [];//存放区间数组用于随机的
+                    var totalnum = 0;
+                    var randommath = Math.ceil(Math.random()*100);
+                    randomnumarr.push(0);
+                    for(var i=0;i<lastarr.length;i++){
+                        totalnum = totalnum+lastarr[i].num;
+                    }
+                    for(var j=0;j<lastarr.length;j++){
+                        if(totalnum!=0){
+                            if(j>0){
+                                randomnumarr.push(Math.ceil((randomnumarr[j-1]/100+lastarr[j].num/totalnum)*100))
+                            }else{
+                                randomnumarr.push(Math.ceil((lastarr[j].num/totalnum)*100))
+                            }
+                        }
+                    }
+
+                    for(var i=0;i<randomnumarr.length-1;i++){
+                        var one = randomnumarr[i];
+                        var two = randomnumarr[i+1]
+                        if(randommath==0){
+                            item.roomresult = lastarr[0];
+                            break;
+                        }
+                        if(randommath>one&&randommath<=two){
+                            item.roomresult = lastarr[i];
+                            break;
+                        }
+                    }
+                    roominfo = item;
+                    //推送给进入房间的人民
+                    sendroom(item,roomid);
+                }
+            });
+
+            socket.emit('roominfo', roominfo, getip(socket));
+        });
     });
 }
